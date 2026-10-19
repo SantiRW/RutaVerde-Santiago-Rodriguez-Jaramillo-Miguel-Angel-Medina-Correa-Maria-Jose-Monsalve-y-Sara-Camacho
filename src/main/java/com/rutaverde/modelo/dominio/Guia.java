@@ -10,12 +10,16 @@ import java.util.Locale;
 import java.util.Set;
 
 public class Guia {
+
+    //Atributos
     private final String identificacion;
     private String nombre;
     private final Set<String> idiomas = new LinkedHashSet<>();
     private String telefono;
     private BigDecimal tarifaPorDia;
 
+
+    //Constructor
     public Guia(String identificacion, String nombre, Collection<String> idiomas,
                 String telefono, BigDecimal tarifaPorDia) {
         this.identificacion = Validaciones.texto(identificacion, "identificación");

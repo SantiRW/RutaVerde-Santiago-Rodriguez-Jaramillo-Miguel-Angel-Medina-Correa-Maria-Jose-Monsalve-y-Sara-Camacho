@@ -4,6 +4,7 @@ import com.rutaverde.modelo.repositorio.Repositorio;
 
 /** Datos básicos de la agencia y acceso a los registros que administra. */
 public class Agencia {
+
     private final String nombreComercial;
     private final String nit;
     private final String rnt;

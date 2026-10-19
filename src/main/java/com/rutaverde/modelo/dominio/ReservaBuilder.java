@@ -10,6 +10,8 @@ import java.time.LocalDate;
  * (guía, transporte, seguro, observaciones); el builder los arma y valida al construir.
  */
 public class ReservaBuilder {
+
+    //Atributos
     Cliente cliente;
     Producto producto;
     LocalDate fechaViaje;

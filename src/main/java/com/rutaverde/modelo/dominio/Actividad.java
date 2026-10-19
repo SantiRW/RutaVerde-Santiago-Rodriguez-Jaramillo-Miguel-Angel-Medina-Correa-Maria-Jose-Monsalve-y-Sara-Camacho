@@ -5,6 +5,8 @@ import java.util.List;
 
 /** PATRÓN COMPOSITE - Hoja. */
 public class Actividad implements Producto {
+
+    //Atributos
     private final String codigo;
     private String nombre;
     private String municipio;
@@ -14,6 +16,9 @@ public class Actividad implements Producto {
     private Dificultad dificultad;
     private EstadoActividad estado;
 
+
+
+    //Constructor
     public Actividad(String codigo, String nombre, String municipio, int duracionHoras,
                      BigDecimal precioPorPersona, int cupoMaximoPorDia,
                      Dificultad dificultad, EstadoActividad estado) {
