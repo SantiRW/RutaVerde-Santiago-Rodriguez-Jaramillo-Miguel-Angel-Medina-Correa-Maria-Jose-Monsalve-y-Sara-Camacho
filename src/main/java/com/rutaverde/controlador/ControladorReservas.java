@@ -82,6 +82,9 @@ public class ControladorReservas implements Refrescable {
         }
     }
 
+    //fallaba con la tarjeta ya cobrada y el cupo descontado,
+    //y la interfaz mostraba un error. ahora confirmar esta dividida en tres
+    //partes para solucionar el error
     private void confirmar() {
         try {
             EmisorVoucher emisor = canales.get(vista.getCanal());
@@ -97,11 +100,13 @@ public class ControladorReservas implements Refrescable {
                 vista.limpiarPago();
                 vista.setReservas(agencia.getReservas().listar());
                 Mensajes.info("Reserva confirmada", resultado.mensaje()
-                        + "\nSe envió el voucher a " + reserva.getCliente().getCorreo() + ".");
+                        + (resultado.correoEnviado()
+                        ? "\nSe envió el voucher a " + reserva.getCliente().getCorreo() + "."
+                        : "\nNo se pudo enviar el correo: entregue el voucher al cliente."));
             } else {
                 vista.mostrarVoucher("");
                 Mensajes.error(resultado.mensaje()
-                        + "\n\nSe envió un correo al cliente con el motivo y no se descontó ningún cupo.");
+                        + (resultado.correoEnviado() ? "\n\nSe envió un correo al cliente con el motivo." : ""));
             }
         } catch (ReglaNegocioException e) {
             Mensajes.error(e.getMessage());

@@ -3,6 +3,7 @@ package com.rutaverde.modelo.dominio;
 import com.rutaverde.modelo.excepcion.ReglaNegocioException;
 
 import java.math.BigDecimal;
+import java.text.Normalizer;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -43,14 +44,29 @@ public class Guia {
         if (nuevos == null || nuevos.isEmpty()) {
             throw new ReglaNegocioException("El guía debe hablar al menos un idioma");
         }
-        idiomas.clear();
+        // se valida en un conjunto aparte, si nuevos es una vista de este mismo guía
+        // o si algún idioma es inválido no se pierde lo que ya tenía.
+        Set<String> normalizados = new LinkedHashSet<>();
         for (String idioma : nuevos) {
-            idiomas.add(Validaciones.texto(idioma, "idioma").toLowerCase(Locale.ROOT));
+            normalizados.add(Validaciones.texto(idioma, "idioma").toLowerCase(Locale.ROOT));
         }
+        idiomas.clear();
+        idiomas.addAll(normalizados);
     }
 
+    /** Compara sin importar mayúsculas ni tildes como ingles e inglés */
     public boolean hablaIdioma(String idioma) {
-        return idioma != null && idiomas.contains(idioma.trim().toLowerCase(Locale.ROOT));
+        if (idioma == null || idioma.isBlank()) return false;
+        String buscado = sinTildes(idioma);
+        for (String propio : idiomas) {
+            if (sinTildes(propio).equals(buscado)) return true;
+        }
+        return false;
+    }
+
+    private static String sinTildes(String texto) {
+        return Normalizer.normalize(texto.trim().toLowerCase(Locale.ROOT), Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "");
     }
 
     @Override public String toString() { return nombre + " (" + identificacion + ")"; }
