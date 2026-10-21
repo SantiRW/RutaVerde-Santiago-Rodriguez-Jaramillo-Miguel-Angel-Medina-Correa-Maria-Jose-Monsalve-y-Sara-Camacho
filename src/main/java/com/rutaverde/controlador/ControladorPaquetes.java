@@ -56,10 +56,9 @@ public class ControladorPaquetes implements Refrescable {
         try {
             Paquete nuevo = new Paquete(vista.getCodigo(), vista.getNombre(),
                     Entradas.decimal(vista.getDescuento(), "descuento (%)"));
-            Optional<Paquete> existente = agencia.getPaquetes().buscar(nuevo.getCodigo());
-            Paquete guardado;
-            if (existente.isPresent()) {
-                guardado = existente.get();
+            // Fila seleccionada = edición; sin selección = paquete nuevo (un código repetido se rechaza).
+            Paquete guardado = vista.getTabla().getSelectionModel().getSelectedItem();
+            if (guardado != null) {
                 guardado.setNombre(nuevo.getNombre());
                 guardado.setDescuentoPorcentaje(nuevo.getDescuentoPorcentaje());
             } else {

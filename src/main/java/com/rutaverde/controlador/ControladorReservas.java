@@ -82,9 +82,6 @@ public class ControladorReservas implements Refrescable {
         }
     }
 
-    //fallaba con la tarjeta ya cobrada y el cupo descontado,
-    //y la interfaz mostraba un error. ahora confirmar esta dividida en tres
-    //partes para solucionar el error
     private void confirmar() {
         try {
             EmisorVoucher emisor = canales.get(vista.getCanal());

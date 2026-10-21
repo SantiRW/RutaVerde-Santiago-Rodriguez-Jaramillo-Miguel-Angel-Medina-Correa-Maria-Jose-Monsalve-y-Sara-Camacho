@@ -35,9 +35,9 @@ public class ControladorGuias implements Refrescable {
                     .map(String::trim).filter(s -> !s.isEmpty()).toList();
             Guia nuevo = new Guia(vista.getIdentificacion(), vista.getNombre(), idiomas, vista.getTelefono(),
                     Entradas.decimal(vista.getTarifa(), "tarifa por día"));
-            Optional<Guia> existente = agencia.getGuias().buscar(nuevo.getIdentificacion());
-            if (existente.isPresent()) {
-                Guia g = existente.get();
+            // Fila seleccionada = edición; sin selección = guía nuevo (una identificación repetida se rechaza).
+            Guia g = vista.getTabla().getSelectionModel().getSelectedItem();
+            if (g != null) {
                 g.setNombre(nuevo.getNombre());
                 g.setIdiomas(nuevo.getIdiomas());
                 g.setTelefono(nuevo.getTelefono());

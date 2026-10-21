@@ -32,9 +32,10 @@ public class ControladorClientes implements Refrescable {
             // Se construye primero para validar todos los campos antes de modificar nada.
             Cliente nuevo = new Cliente(vista.getDocumento(), vista.getNombre(), vista.getTelefono(),
                     vista.getCorreo(), vista.getPais(), vista.getIdioma());
-            Optional<Cliente> existente = agencia.getClientes().buscar(nuevo.getDocumento());
-            if (existente.isPresent()) {
-                Cliente c = existente.get();
+            // Si hay una fila seleccionada se está editando (el documento está bloqueado);
+            // si no, es un cliente nuevo y un documento repetido se rechaza en vez de pisar al anterior.
+            Cliente c = vista.getTabla().getSelectionModel().getSelectedItem();
+            if (c != null) {
                 c.setNombreCompleto(nuevo.getNombreCompleto());
                 c.setTelefono(nuevo.getTelefono());
                 c.setCorreo(nuevo.getCorreo());

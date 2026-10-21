@@ -35,9 +35,9 @@ public class ControladorActividades implements Refrescable {
                     Entradas.decimal(vista.getPrecio(), "precio por persona"),
                     Entradas.entero(vista.getCupo(), "cupo máximo por día"),
                     vista.getDificultad(), vista.getEstado());
-            Optional<Actividad> existente = agencia.getActividades().buscar(nueva.getCodigo());
-            if (existente.isPresent()) {
-                Actividad a = existente.get();
+            // Fila seleccionada = edición; sin selección = actividad nueva (un código repetido se rechaza).
+            Actividad a = vista.getTabla().getSelectionModel().getSelectedItem();
+            if (a != null) {
                 a.setNombre(nueva.getNombre());
                 a.setMunicipio(nueva.getMunicipio());
                 a.setDuracionHoras(nueva.getDuracionHoras());
