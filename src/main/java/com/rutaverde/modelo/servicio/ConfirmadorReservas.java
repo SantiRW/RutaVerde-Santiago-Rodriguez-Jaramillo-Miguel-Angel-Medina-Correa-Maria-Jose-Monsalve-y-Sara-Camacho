@@ -33,13 +33,27 @@ public class ConfirmadorReservas {
         this.correo = correo;
     }
 
-    /** Pasos en orden exacto; si uno falla se avisa al cliente y no se descuenta ningún cupo. */
+    /**
+     * Pasos en orden exacto. Hay tres fases con reglas distintas:
+     * <ol>
+     *   <li>Antes del cobro (cupo, tarjeta, pasarela): si algo falla se avisa al cliente y no se
+     *       cobra ni se descuenta ningún cupo.</li>
+     *   <li>Cobro aprobado: descontar cupos y registrar. Ya hay plata cobrada, así que si esto falla
+     *       el mensaje lo dice claramente en vez de aparentar que no pasó nada.</li>
+     *   <li>Voucher y correo: la reserva ya existe; un correo caído no la deshace.</li>
+     * </ol>
+     */
     public synchronized ResultadoConfirmacion confirmar(Reserva reserva, String numeroTarjeta,
                                                         EmisorVoucher emisorVoucher) {
+        if (reserva.estaConfirmada()) {
+            // No se escribe al cliente: su reserva sigue vigente.
+            return new ResultadoConfirmacion(false, "La reserva ya fue confirmada", reserva, null, false);
+        }
+
+        // ---- Fase 1: validar y cobrar ----
+        String tarjeta = numeroTarjeta == null ? null : numeroTarjeta.replace(" ", "");
+        ResultadoPago pago;
         try {
-            if (reserva.estaConfirmada()) {
-                return rechazar(reserva, "La reserva ya fue confirmada");
-            }
             // 1. Verificar cupo (y que ninguna actividad haya sido suspendida entretanto)
             for (Actividad a : reserva.getProducto().getActividades()) {
                 if (a.estaSuspendida()) {
@@ -50,34 +64,54 @@ public class ConfirmadorReservas {
                 return rechazar(reserva, "No hay cupo suficiente en la fecha del viaje");
             }
             // 2. Validar tarjeta
-            if (!validadorTarjeta.esValida(numeroTarjeta)) {
+            if (!validadorTarjeta.esValida(tarjeta)) {
                 return rechazar(reserva, "El número de tarjeta no es válido");
             }
             // 3. Cobrar en la pasarela
-            String referencia = "RES-" + reserva.getCliente().getDocumento() + "-" + reserva.getFechaViaje();
-            ResultadoPago pago = pasarela.cobrar(numeroTarjeta, reserva.getValor(), referencia);
-            if (!pago.aprobado()) {
-                return rechazar(reserva, "Pago rechazado: " + pago.motivo().getMensaje());
-            }
+            String referencia = "RES-" + reserva.getCliente().getDocumento()
+                    + "-" + reserva.getProducto().getCodigo() + "-" + reserva.getFechaViaje();
+            pago = pasarela.cobrar(tarjeta, reserva.getValor(), referencia);
+        } catch (RuntimeException e) {
+            return rechazar(reserva, "Error inesperado: " + e.getMessage());
+        }
+        if (!pago.aprobado()) {
+            return rechazar(reserva, "Pago rechazado: " + pago.motivo().getMensaje());
+        }
+
+        // ---- Fase 2: el cobro ya se hizo ----
+        try {
             // 4. Descontar cupos
             cupos.descontar(reserva.getProducto(), reserva.getFechaViaje(), reserva.getViajeros());
             // 5. Registrar con número consecutivo
             reserva.confirmar(consecutivo.siguiente(), pago.autorizacion());
             reservas.agregar(reserva);
-            // 6. Emitir voucher
-            String voucher = emisorVoucher.emitir(reserva);
-            // 7. Enviar por correo
-            correo.enviar(reserva.getCliente().getCorreo(),
-                    "Voucher de su reserva No. " + reserva.getNumero(), voucher);
-            return new ResultadoConfirmacion(true, "Reserva confirmada No. " + reserva.getNumero(), reserva, voucher);
         } catch (RuntimeException e) {
-            return rechazar(reserva, "Error inesperado: " + e.getMessage());
+            return new ResultadoConfirmacion(false, "El pago fue aprobado (autorización " + pago.autorizacion()
+                    + ") pero no se pudo registrar la reserva: " + e.getMessage()
+                    + ". Comuníquese con un asesor para resolver el cobro.", reserva, null, false);
         }
+
+        // ---- Fase 3: voucher y correo (la reserva ya quedó registrada) ----
+        String voucher = emisorVoucher.emitir(reserva);
+        String mensaje = "Reserva confirmada No. " + reserva.getNumero();
+        boolean enviado = enviarSinFallar(reserva.getCliente().getCorreo(),
+                "Voucher de su reserva No. " + reserva.getNumero(), voucher);
+        return new ResultadoConfirmacion(true, mensaje, reserva, voucher, enviado);
     }
 
     private ResultadoConfirmacion rechazar(Reserva reserva, String motivo) {
-        correo.enviar(reserva.getCliente().getCorreo(),
+        boolean enviado = enviarSinFallar(reserva.getCliente().getCorreo(),
                 "No fue posible confirmar su reserva", "Motivo: " + motivo);
-        return new ResultadoConfirmacion(false, motivo, reserva, null);
+        return new ResultadoConfirmacion(false, motivo, reserva, null, enviado);
+    }
+
+    /** Un correo que no sale nunca debe tumbar el proceso ni ocultar el resultado real. */
+    private boolean enviarSinFallar(String destinatario, String asunto, String cuerpo) {
+        try {
+            correo.enviar(destinatario, asunto, cuerpo);
+            return true;
+        } catch (RuntimeException e) {
+            return false;
+        }
     }
 }
